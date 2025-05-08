@@ -256,17 +256,24 @@ def generate_query_name(user_query: str) -> str:
     # If query starts with "what is", replace it with a more descriptive prefix
     if query.lower().startswith("what is"):
         query = query[8:].strip()
-        return f"Analysis of {query}"
+        name = f"Analysis of {query}"
     elif query.lower().startswith("show me"):
         query = query[7:].strip()
-        return f"Analysis of {query}"
+        name = f"Analysis of {query}"
     elif query.lower().startswith("calculate"):
         query = query[9:].strip()
-        return f"Calculation of {query}"
+        name = f"Calculation of {query}"
+    else:
+        # Capitalize the first letter of each word for Title Case
+        words = query.split()
+        name = " ".join(words).title()
     
-    # Capitalize the first letter of each word for Title Case
-    words = query.split()
-    return " ".join(words).title()
+    # Truncate to 7 words if longer
+    words = name.split()
+    if len(words) > 7:
+        name = " ".join(words[:7]) + " ..."
+    
+    return name
 
 # Node 5: Construct final payload
 def construct_payload(state: AgentState) -> AgentState:
@@ -290,6 +297,7 @@ def construct_payload(state: AgentState) -> AgentState:
     3. The most appropriate visualization type for the result (one of: "bar", "line", "pie", "area")
     4. The main metric column name from the SQL query (e.g., "Average_Loan_Duration")
     5. The table being queried (e.g., "full_data_inpaymentlatest")
+    6. If the user mentions or requests a specific priority number (e.g., "set priority to 5" or "priority 10"), extract that number as the "priority" field. If no priority is mentioned, do not include this field.
     
     Return a JSON object with these properties.
     """
@@ -312,10 +320,16 @@ def construct_payload(state: AgentState) -> AgentState:
         
         # Extract the information
         query_name = query_analysis.get("name") or generate_query_name(state["query"])
-        query_description = query_analysis.get("description", "Analysis of database information")
+        
+        default_description = f"Visualization based on {state['query'][:50]}{'...' if len(state['query']) > 50 else ''}"
+        query_description = query_analysis.get("description", default_description)
+        
         visualization_type = query_analysis.get("visualization_type", "bar")
         metric_name = query_analysis.get("main_metric", "Value")
         table_name = query_analysis.get("table", "full_data_inpaymentlatest")
+        
+        # Extract priority if specified in the query analysis
+        priority = query_analysis.get("priority", 2147483647)
         
         payload = {
             "name": query_name,
@@ -635,7 +649,7 @@ def construct_payload(state: AgentState) -> AgentState:
             },
             "dashboard_type": "cpm",
             "user_type": "TLF_USER",
-            "priority": 1
+            "priority": priority
         }
         
         # Update state with the final payload
