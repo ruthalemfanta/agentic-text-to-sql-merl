@@ -2,8 +2,6 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 # from sqlalchemy.orm import Session
 from typing import Dict, Any
-import pandas as pd
-import plotly.express as px
 from pydantic import BaseModel
 import logging
 import json
@@ -83,7 +81,6 @@ async def health_check():
             "status": "healthy", 
             "service": "agentic-sql-query", 
             "version": "1.0.0",
-            "timestamp": pd.Timestamp.now().isoformat()
         }
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
